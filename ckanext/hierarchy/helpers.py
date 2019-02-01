@@ -1,6 +1,10 @@
 import ckan.plugins as p
 import ckan.model as model
 from ckan.common import request
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def group_tree(organizations=[], type_='organization'):
     full_tree_list = p.toolkit.get_action('group_tree')({}, {'type': type_})
@@ -42,7 +46,12 @@ def group_tree_section(id_, type_='organization', include_parents=True, include_
         {'include_parents':include_parents, 'include_siblings':include_siblings}, {'id': id_, 'type': type_,})
 
 def group_tree_parents(id_, type_='organization'):
-     tree_node =  p.toolkit.get_action('organization_show')({},{'id':id_})
+     try:
+         tree_node =  p.toolkit.get_action('organization_show')({},{'id':id_})
+     except Exception as inst:
+         log.warning("EXCEPTION getting the group tree parents: " + str(type(inst)) + ":" + str(inst))
+         log.warning("Returning empty list for " + str(id_))
+         return []
      if (tree_node['groups']):
          parent_id = tree_node['groups'][0]['name']
          parent_node =  p.toolkit.get_action('organization_show')({},{'id':parent_id})
@@ -68,7 +77,6 @@ def group_tree_highlight(organizations, group_tree_list):
             traverse_highlight(child, name_list)
 
     selected_names = [ o.get('name',None) for o in organizations]
-    print(selected_names)
 
     for group in group_tree_list:
         traverse_highlight(group, selected_names)
@@ -90,3 +98,7 @@ def is_include_children_selected(fields):
         include_children_selected = True
     return include_children_selected
 
+
+def add_children_selected_facet_title(facet_titles):
+     facet_titles['include_children'] = 'Include Sub-Organizations'
+     return facet_titles
